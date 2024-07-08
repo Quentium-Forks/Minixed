@@ -39,9 +39,9 @@ $_browse = null;
 if ($browseDirectories) {
     if (!empty($browseDefault) && !isset($_GET['b']))
         $_GET['b'] = $browseDefault;
-    $_GET['b'] = trim(str_replace('\\', '/', (string) @$_GET['b']), '/ ');
-    $_GET['b'] = str_replace(array('/..', '../'), '', (string) @$_GET['b']);  // Avoid going up into filesystem
-    if (!empty($_GET['b']) && $_GET['b'] != '..' && is_dir($_GET['b'])) {
+    $_GET['b'] = trim(str_replace('\\', '/', strval($_GET['b'])), '/ ');
+    $_GET['b'] = str_replace(array('/..', '../'), '', strval($_GET['b']));  // Avoid going up into filesystem
+    if (!empty($_GET['b']) && $_GET['b'] !== '..' && is_dir($_GET['b'])) {
         $browseIgnored = false;
         foreach (explode('/', $_GET['b']) as $browseName) {
             if (!empty($ignore) && is_array($ignore) && in_array($browseName, $ignore)) {
@@ -90,17 +90,18 @@ function ls($path, $show_folders = false, $show_hidden = false) {
 
     $ls = array();
     $ls_d = array();
-    if (($dh = @opendir($path)) === false)
+    $dh = opendir($path);
+    if (!$dh)
         return $ls;
-    if (substr($path, -1) != '/')
+    if (substr($path, -1) !== '/')
         $path .= '/';
     while (($file = readdir($dh)) !== false) {
-        if ($file == $_self)
+        if ($file === $_self)
             continue;
-        if ($file == '.' || $file == '..')
+        if ($file === '.' || $file === '..')
             continue;
         if (!$show_hidden)
-            if (substr($file, 0, 1) == '.')
+            if (substr($file, 0, 1) === '.')
                 continue;
         if (!empty($ignore) && is_array($ignore) && in_array($file, $ignore))
             continue;
@@ -126,45 +127,48 @@ $items = ls('.' . (empty($_browse) ? '' : '/' . $_browse), $showDirectories, $sh
 function sortByName($a, $b) {
     global $showDirectoriesFirst;
 
-    return ($a['isdir'] == $b['isdir'] || !$showDirectoriesFirst ? strtolower($a['name']) > strtolower($b['name']) : $a['isdir'] < $b['isdir']) ? 1 : -1;
+    return ($a['isdir'] === $b['isdir'] || !$showDirectoriesFirst ? strtolower($a['name']) > strtolower($b['name']) : $a['isdir'] < $b['isdir']) ? 1 : -1;
 }
 
 function sortBySize($a, $b) {
-    return ($a['isdir'] == $b['isdir'] ? $a['size'] > $b['size'] : $a['isdir'] < $b['isdir']) ? 1 : -1;
+    return ($a['isdir'] === $b['isdir'] ? $a['size'] > $b['size'] : $a['isdir'] < $b['isdir']) ? 1 : -1;
 }
 
 function sortByTime($a, $b) {
     return ($a['time'] > $b['time']) ? 1 : -1;
 }
 
-switch (@$_GET['s']) {
-    case 'size':
-        $_sort = 'size';
-        usort($items, 'sortBySize');
-        break;
-    case 'time':
-        $_sort = 'time';
-        usort($items, 'sortByTime');
-        break;
-    default:
-        $_sort = 'name';
-        usort($items, 'sortByName');
-        break;
+if (isset($_GET['s'])) {
+    switch ($_GET['s']) {
+        case 'size':
+            $_sort = 'size';
+            usort($items, 'sortBySize');
+            break;
+        case 'time':
+            $_sort = 'time';
+            usort($items, 'sortByTime');
+            break;
+        default:
+            $_sort = 'name';
+            usort($items, 'sortByName');
+            break;
+    }
 }
 
 // Reverse?
-$_sort_reverse = (@$_GET['r'] == '1');
-if ($_sort_reverse)
+$_sort_reverse = isset($_GET['r']) && $_GET['r'] === '1';
+if ($_sort_reverse) {
     $items = array_reverse($items);
+}
 
 // Add parent
-if ($showParent && $_path != '/' && empty($_browse))
+if ($showParent && $_path !== '/' && empty($_browse))
     array_unshift($items, array(
         'name' => '..',
         'isparent' => true,
         'isdir' => true,
         'size' => 0,
-        'time' => 0
+        'time' => 0,
     ));
 
 // Add parent in case of browsing a sub-folder
@@ -174,7 +178,7 @@ if (!empty($_browse))
         'isparent' => false,
         'isdir' => true,
         'size' => 0,
-        'time' => 0
+        'time' => 0,
     ));
 
 // 37.6 MB is better than 39487001
@@ -197,7 +201,7 @@ function getTitleHTML($title, $breadcrumbs = false) {
     if ($breadcrumbs)
         $path = sprintf('<a href="%s">%s</a>', htmlentities(buildLink(array('b' => ''))), $path);
     if (!empty($_browse)) {
-        if ($_path != '/')
+        if ($_path !== '/')
             $path .= '/';
         $browseArray = explode('/', trim($_browse, '/'));
         foreach ($browseArray as $i => $part) {
@@ -229,16 +233,16 @@ function buildLink($changes) {
 
     return empty($params) ? $_self : $_self . '?' . implode('&', $params);
 }
-
 ?>
+
 <!DOCTYPE HTML>
-<html lang="en-US">
+<html lang="en">
 
 <head>
 
     <meta charset="UTF-8">
     <meta name="robots" content="<?php echo htmlentities($robots) ?>">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title><?php echo getTitleHTML($title) ?></title>
 
@@ -252,13 +256,13 @@ function buildLink($changes) {
         body {
             text-align: center;
             font-family: sans-serif;
-            font-size: 13px;
+            font-size: 14px;
             color: #000000;
         }
 
         #wrapper {
             max-width: 600px;
-            *width: 600px;
+            width: 600px;
             margin: 0 auto;
             text-align: left;
         }
@@ -272,7 +276,7 @@ function buildLink($changes) {
         }
 
         h1 {
-            font-size: 21px;
+            font-size: 22px;
             padding: 0 10px;
             margin: 20px 0 0;
             font-weight: bold;
@@ -411,19 +415,20 @@ function buildLink($changes) {
 
 </head>
 
-<body <?php if ($alignment == 'left') echo 'id="left"' ?>>
+<body <?php if ($alignment === 'left') echo 'id="left"' ?>>
 
     <div id="wrapper">
 
         <h1><?php echo getTitleHTML($title, $breadcrumbs) ?></h1>
+
         <h2><?php echo getTitleHTML($subtitle, $breadcrumbs) ?></h2>
 
         <ul id="header">
 
             <li>
-                <a href="<?php echo buildLink(array('s' => 'size', 'r' => (!$_sort_reverse && $_sort == 'size') ? '1' : null)) ?>" class="size <?php if ($_sort == 'size') echo $_sort_reverse ? 'desc' : 'asc' ?>"><span>Size</span></a>
-                <a href="<?php echo buildLink(array('s' => 'time', 'r' => (!$_sort_reverse && $_sort == 'time') ? '1' : null)) ?>" class="date <?php if ($_sort == 'time') echo $_sort_reverse ? 'desc' : 'asc' ?>"><span>Last modified</span></a>
-                <a href="<?php echo buildLink(array('s' => null, 'r' => (!$_sort_reverse && $_sort == 'name') ? '1' : null)) ?>" class="name <?php if ($_sort == 'name') echo $_sort_reverse ? 'desc' : 'asc' ?>"><span>Name</span></a>
+                <a href="<?php echo buildLink(array('s' => 'size', 'r' => (!$_sort_reverse && $_sort === 'size') ? '1' : null)) ?>" class="size <?php if ($_sort === 'size') echo $_sort_reverse ? 'desc' : 'asc' ?>"><span>Size</span></a>
+                <a href="<?php echo buildLink(array('s' => 'time', 'r' => (!$_sort_reverse && $_sort === 'time') ? '1' : null)) ?>" class="date <?php if ($_sort === 'time') echo $_sort_reverse ? 'desc' : 'asc' ?>"><span>Last modified</span></a>
+                <a href="<?php echo buildLink(array('s' => null, 'r' => (!$_sort_reverse && $_sort === 'name') ? '1' : null)) ?>" class="name <?php if ($_sort === 'name') echo $_sort_reverse ? 'desc' : 'asc' ?>"><span>Name</span></a>
             </li>
 
         </ul>
@@ -436,17 +441,17 @@ function buildLink($changes) {
 
                     <span class="size"><?php echo $item['isdir'] ? '-' : humanizeFilesize($item['size'], $sizeDecimals) ?></span>
 
-                    <span class="date"><?php echo (@$item['isparent'] || empty($item['time'])) ? '-' : date($dateFormat, $item['time']) ?></span>
+                    <span class="date"><?php echo ($item['isparent'] || empty($item['time'])) ? '-' : date($dateFormat, $item['time']) ?></span>
 
                     <?php
-                    if ($item['isdir'] && $browseDirectories && !@$item['isparent']) {
-                        if ($item['name'] == '..') {
+                    if ($item['isdir'] && $browseDirectories && !$item['isparent']) {
+                        if ($item['name'] === '..') {
                             $itemURL = buildLink(array('b' => substr($_browse, 0, strrpos($_browse, '/'))));
                         } else {
-                            $itemURL = buildLink(array('b' => (empty($_browse) ? '' : (string) $_browse . '/') . $item['name']));
+                            $itemURL = buildLink(array('b' => (empty($_browse) ? '' : $_browse . '/') . $item['name']));
                         }
                     } else {
-                        $itemURL = (empty($_browse) ? '' : str_replace(['%2F', '%2f'], '/', rawurlencode((string) $_browse)) . '/') . rawurlencode($item['name']);
+                        $itemURL = (empty($_browse) ? '' : str_replace(['%2F', '%2f'], '/', rawurlencode($_browse)) . '/') . rawurlencode($item['name']);
                     }
                     ?>
 
