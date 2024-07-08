@@ -108,7 +108,13 @@ function ls($path, $show_folders = false, $show_hidden = false) {
         $isdir = is_dir($path . $file);
         if (!$show_folders && $isdir)
             continue;
-        $item = array('name' => $file, 'isdir' => $isdir, 'size' => $isdir ? 0 : filesize($path . $file), 'time' => filemtime($path . $file));
+        $item = array(
+            'name' => $file,
+            'isparent' => false,
+            'isdir' => $isdir,
+            'size' => $isdir ? 0 : filesize($path . $file),
+            'time' => filemtime($path . $file)
+        );
         if ($isdir)
             $ls_d[] = $item;
         else
